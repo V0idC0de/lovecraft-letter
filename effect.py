@@ -133,7 +133,7 @@ EFFECT_DESCRIPTIONS = {
     "4": "Du bist bis zu deinem nächsten Zug geschützt.",
     "4m": "Du kannst bis zum Ende der Runde nicht ausscheiden.",
     "5": "Wähle einen Spieler, der seine Handkarte ablegt und eine neue Karte zieht.",
-    "5m": "Nimm die Handkarte eines Mitspielers und spiele dann 1 Handkarte aus. Der Mitspieler nimmt sich den 'Gehirnzylinder der Mi-Go'",
+    "5m": "Nimm die Handkarte eines Mitspielers und spiele dann 1 Handkarte aus. Der Mitspieler nimmt sich den 'Gehirnzylinder der Mi-Go'.",
     "6": "Tausche deine Handkarte mit der eines Mitspielers.",
     "6m": "Nimm alle Handkarten der Mitspieler. Schaue sie an und gib jedem 1 Karte deiner Wahl zurück.",
     "7": "Wenn du zusätzlich eine Karte mit einer '5' oder höher auf der Hand hast, musst du diese Karte ausspielen.",

@@ -57,6 +57,14 @@ class Effect:
         return self.activation_default_restrictions(gamestate, player)
 
     def activation_default_restrictions(self, gamestate: "Gamestate", player: Player) -> bool:
+        """
+        Normal restrictions for cards to activate. Convenience function for effects that use
+        custom activation conditions, but want to add to the default restrictions, instead of replacing them.
+
+        :param gamestate:
+        :param player:
+        :return:
+        """
         return (self.activation_madness_restriction(gamestate, player) and
                 self.activation_silver_key_restriction(gamestate, player))
 

@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Callable
 
 from colorama import Fore
 
@@ -61,5 +60,14 @@ class Card:
         return int(code[0])
 
     def can_activate(self, gamestate: "Gamestate", player: "Player") -> bool:
+        """
+        Determines if the card can be activated by the player. This is generally true if one or more of the card's
+        effect(s) can be activated. There is currently no card that needs a special card activation condition,
+        since the effect instances can handle that themselves.
+
+        :param gamestate:
+        :param player:
+        :return:
+        """
         return ((self.effect.can_activate(gamestate, player)) or (
                 self.effect_madness is not None and self.effect_madness.can_activate(gamestate, player)))

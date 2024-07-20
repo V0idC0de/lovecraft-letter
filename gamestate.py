@@ -24,10 +24,12 @@ class Gamestate:
 
     @property
     def players_in_game(self) -> list[Player]:
+        """ All players who aren't eliminated yet and are still participating in this round. """
         return [player for player in self.players if player not in self.players_out]
 
     @property
     def players_mad(self) -> set[Player]:
+        """ All players who have at least one madness card in their discard pile. """
         madness_status = {
             player: any(card.effect_madness is not None for card in self.discard_pile.get(player, []))
             for player in self.players
@@ -44,6 +46,9 @@ class Gamestate:
         self.scores = {player: (0, 0) for player in self.players}
 
     def initialize_round(self) -> None:
+        """
+        Resets the field to start a new round. This must be called after `__init__()` before calling `start_game()`.
+        """
         with open("deck.txt") as f:
             deck_cards = [tuple(line.strip().split(maxsplit=1)) for line in f.readlines()
                           if not line.strip().startswith("#") and line.strip()]
@@ -62,12 +67,13 @@ class Gamestate:
         self.turn_player = self.players[0]
         self.hands = {player: [] for player in self.players}
         self.discard_pile = {player: [] for player in self.players}
-
-
         for player in self.players:
             self.draw_card(player)
 
     def start_game(self) -> None:
+        """
+        Start the game and repeatedly start new rounds until a player wins the game.
+        """
         try:
             while True:
                 self._start_round()
@@ -77,6 +83,9 @@ class Gamestate:
             print(f"{Fore.CYAN}Game ended by KeyboardInterrupt{Fore.RESET}")
 
     def _start_round(self) -> None:
+        """
+        Initializes a new round, thus resetting the field and repeatedly processes turns until the round ends.
+        """
         self.initialize_round()
         try:
             while True:
@@ -105,11 +114,16 @@ class Gamestate:
         print()
         print()
         time.sleep(3)
+
     def shuffle_deck(self) -> None:
         print(f"{Fore.CYAN}Shuffling deck...{Fore.RESET}")
         random.shuffle(self.deck)
 
-    def process_turn(self):
+    def process_turn(self) -> None:
+        """
+        Core logic of the game. Processes the turn of the current player and performs all necessary steps.
+        Logic in this function should be minimal, as all changes to the `Gamestate` should be done via functions.
+        """
         time.sleep(2)
         print()
         print(f">> {Fore.YELLOW}{self.turn_player.name}'s turn{Fore.RESET}")
@@ -128,6 +142,10 @@ class Gamestate:
         self.turn_player = self.next_player()
 
     def next_player(self) -> Player:
+        """
+        Determine the next player in row to perform a turn.
+        :return: Next Player in row
+        """
         # Determine which players are not out yet. Keep the turn_player in the list to have the current player's index,
         # in case the current player was eliminated in this turn.
         players_in_game = [player for player in self.players
@@ -146,7 +164,13 @@ class Gamestate:
             print(f"{Fore.YELLOW}{last_player.name} {Fore.CYAN}is the last survivor!{Fore.RESET}")
             raise RoundEndException(last_player)
 
-    def deck_out_of_cards(self):
+    def deck_out_of_cards(self) -> None:
+        """
+        Game Logic for handling the situation of an empty deck from which a play attempts to draw.
+        This instantly ends the round and performs a value comparison of the player's cards.
+        The highest card wins, unless multiple players have the same highest card, in which case those are eliminated
+        and the next-highest card is considered in the same fashion.
+        """
         print(f"{Fore.CYAN}Deck out of cards, winner is determined by card value.{Fore.RESET}")
         players_in_game = {player: hand[0].value for player, hand in self.hands.items()
                            if player not in self.players_out}
@@ -167,7 +191,11 @@ class Gamestate:
         print(f"{Fore.CYAN}Winner is {Fore.RESET}{winner.name}")
         raise RoundEndException(winner)
 
-    def print_state(self, player: Player):
+    def print_state(self, player: Player) -> None:
+        """
+        Prints the current state of the game for a player's convenience, showing hand cards and discard pile.
+        :param player: Player to display the state for.
+        """
         print(f"{Fore.LIGHTBLUE_EX}Hand Cards:{Fore.RESET}")
         for card in self.hands[player]:
             print(f"\t[{card.value}]"
@@ -183,6 +211,14 @@ class Gamestate:
         print()
 
     def draw_card(self, player: Player, append_to_hand: bool = True) -> Card:
+        """
+        Makes `player` draw a card from the deck and optionally append it to their hand directly.
+        Useful for beginning of a turn, effects or insanity-checks.
+
+        :param player: Player to draw a card for.
+        :param append_to_hand: Whether to add the drawn card to the player's hand. Default is True.
+        :return: The drawn card.
+        """
         print(f"{player.name} draws a card")
         if len(self.deck) == 0:
             self.deck_out_of_cards()
@@ -191,7 +227,15 @@ class Gamestate:
             self.hands[player].append(card)
         return card
 
-    def discard_card(self, discarding_player: Player, discard_card: Card):
+    def discard_card(self, discarding_player: Player, discard_card: Card) -> None:
+        """
+        Perform a "discard" action, which is different from simply playing a card, since some cards have effects that
+        specifically triggers when they are discarded.
+
+        :param discarding_player: Player discarding the card and triggering the effect of the card, if any.
+        :param discard_card: Card to discard. If this card is not in the hand of `discarding_player`, nothing happens.
+        :return:
+        """
         if discard_card not in self.hands[discarding_player]:
             return
         print(f"{Fore.YELLOW}{discarding_player.name} discards "
@@ -202,6 +246,13 @@ class Gamestate:
             discard_card.effect_on_discard.effect(self, discarding_player)
 
     def play_card_effect(self, activating_player: Player) -> None:
+        """
+        Shows all available cards/effects of `activating_player` to choose one of them for activation.
+        This function is only intended for the actual act of "playing a card" and should not be used for other
+        card-selection actions (consider using `select_card_from` or `select_effect_from` instead).
+        :param activating_player: Player whose hand cards are shown and who selects a card to play.
+        :return:
+        """
         effect_to_activate = self.select_effect_from(self.hands[activating_player], activating_player)
         card_to_play = effect_to_activate.card
 
@@ -213,6 +264,14 @@ class Gamestate:
         self.discard_pile[activating_player].append(card_to_play)
 
     def eliminate_player(self, eliminated_player: Player, killer_player: Player | None = None) -> bool:
+        """
+        Attempts to eliminate a player and removes them from the current round, unless the player is "protected".
+
+        :param eliminated_player: Player to eliminate.
+        :param killer_player: Player who eliminated the `eliminated_player`. Default is None.
+        :return: Whether the elimination was successful. If the player was protected,
+            the elimination fails and returns `False`.
+        """
         if eliminated_player in self.players_protected:
             print(f"{Fore.YELLOW}{eliminated_player.name}{Fore.CYAN} is protected and could not be eliminated!"
                   f"{Fore.RESET}")
@@ -230,6 +289,12 @@ class Gamestate:
         return True
 
     def select_card_from(self, cards: list[Card]) -> Card:
+        """
+        Prompts the user to select a card from a list of cards. Does not execute any effects or actions.
+
+        :param cards: Cards to chose from.
+        :return: Chosen card.
+        """
         if len(cards) == 0:
             raise ValueError("No cards to select from")
         if len(cards) == 1:
@@ -249,7 +314,19 @@ class Gamestate:
                            cards_or_effects: Card | list[Card] | list[Effect],
                            activating_player: Player,
                            auto_return: bool = False,
-                           ignore_activation_condition: bool = False) -> Effect | None:
+                           ignore_activation_condition: bool = False) -> Effect:
+        """
+        Lists all effects available on the the given cards or effect-list and prompts the user to select one of them.
+        Unavailable effects, whose activation-condition is not met, are shown as well, but cannot be selected.
+
+        :param cards_or_effects: Card(s) or Effects that should be shows as effect selection.
+        :param activating_player: Player activating the effect.
+        :param auto_return: If `True` and only one effect is available, this effect is returned immediately without
+            prompting the user. Default is `False`.
+        :param ignore_activation_condition: If `True`, all effects are shown as available, regardless of their
+            activation condition and can be selected. Default is `False`.
+        :return: Selected Effect
+        """
         if isinstance(cards_or_effects, (Card, Effect)):
             cards_or_effects = [cards_or_effects]
 
@@ -268,7 +345,7 @@ class Gamestate:
 
         num_available_effects = len([e for e, can_activate in effects_available.items() if can_activate])
         if num_available_effects == 0:
-            return None
+            raise ValueError("No effects available to select from. This should not happen!")
         if num_available_effects == 1 and auto_return:
             return effects[0]
 
@@ -360,9 +437,22 @@ class Gamestate:
         return selection
 
     def schedule_on_player_turn_start(self, player: Player, effect_func: Callable[["Gamestate"], None]) -> None:
+        """
+        Adds a function to the list of functions that are executed at the start of a player's turn,
+        before any game actions are taken.
+        """
         self.on_player_turn_start[player].append(effect_func)
 
     def protect_player(self, target_player: Player, indefinitely: bool = False) -> None:
+        """
+        Grants the "protected" status to a player, which prevents them from being eliminated by other players.
+        Also schedules an automatic removal of the protection at the start of the next turn of the protected player,
+        unless `indefinitely` is set to `True`.
+
+        :param target_player: Player to protect.
+        :param indefinitely: If True, the player is protected indefinitely until the protection is removed manually.
+        :return:
+        """
         if indefinitely:
             print(f"{Fore.YELLOW}{target_player.name}{Fore.CYAN} is now protected!{Fore.RESET}")
         else:
@@ -373,10 +463,20 @@ class Gamestate:
         self.players_protected.add(target_player)
 
     def unprotect_player(self, player: Player) -> None:
+        """ Removes the "protected" status from a player. """
         print(f"{Fore.YELLOW}{player.name}{Fore.CYAN} is no longer protected!{Fore.RESET}")
         self.players_protected.remove(player)
 
     def insanity_check(self, player: Player) -> None:
+        """
+        Performs the "Insanity Check" for a player, causing them to draw cards from the deck and place them on their
+        discard pile. The draw-and-discard (it's not a "discard" in the game-rule-sense) process is repeated until
+        they "burned" an amount of cards, equal to the number of madness cards in their discard pile
+        at the beginning of their turn. If any of the drawn cards is a madness card, the player is eliminated.
+
+        :param player: Player to perform the insanity check for.
+        :return:
+        """
         madness_cards = len([card for card in self.discard_pile[player] if card.effect_madness is not None])
         if madness_cards > 0:
             print(f"{Fore.GREEN}The Void whispers to {Fore.YELLOW}{player.name}{Fore.GREEN} demanding "
@@ -398,6 +498,10 @@ class Gamestate:
                   f"{Fore.RESET}")
 
     def process_turn_start_hooks(self, player: Player):
+        """
+        Executes all functions that are scheduled to be executed at the start of a player's turn,
+        removing them from the list in the process, so they aren't executed again on the player's next turn.
+        """
         while len(self.on_player_turn_start[player]) > 0:
             effect_func = self.on_player_turn_start[player].pop(0)
             effect_func(self)

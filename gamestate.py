@@ -42,14 +42,20 @@ class Gamestate:
         else:
             raise ValueError("Invalid player names or number of players")
         self.scores = {player: (0, 0) for player in self.players}
-        self.initialize_round()
 
     def initialize_round(self) -> None:
         with open("deck.txt") as f:
             deck_cards = [tuple(line.strip().split(maxsplit=1)) for line in f.readlines()
                           if not line.strip().startswith("#") and line.strip()]
         self.deck = sum(([Card(code)] * int(n) for n, code in deck_cards if code in CARD_NAMES.keys()), [])
+        self.shuffle_deck()
         self.banished_cards = []
+        # If the game is played with 2 players, banish 5 cards from the deck face-up
+        if len(self.players) == 2:
+            for i in range(5):
+                banish_card = self.deck.pop()
+                print(f"{Fore.CYAN}[2-Player-Rule] Banishing \"{Fore.YELLOW}{str(banish_card)}{Fore.RESET}\"")
+                self.banished_cards.append(banish_card)
         self.players_out = set()
         self.players_protected = set()
         self.on_player_turn_start = defaultdict(list)
@@ -57,7 +63,7 @@ class Gamestate:
         self.hands = {player: [] for player in self.players}
         self.discard_pile = {player: [] for player in self.players}
 
-        self.shuffle_deck()
+
         for player in self.players:
             self.draw_card(player)
 

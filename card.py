@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Callable
 
+from colorama import Fore
+
 from effect import Effect
 
 CARD_NAMES = {
@@ -43,6 +45,10 @@ class Card:
 
     def __eq__(self, other):
         return self.code == other.code
+
+    def __str__(self):
+        return (f"{Fore.GREEN if self.effect_madness is not None else Fore.RESET}"
+                f"[{self.value}] {self.name}{Fore.RESET}")
 
     @staticmethod
     def name_by_code(code: str) -> str:
